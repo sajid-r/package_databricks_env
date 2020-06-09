@@ -137,16 +137,15 @@ def python_main(destination, requirements, error_file, sanity_flag=False):
                         os.system(f"echo {package} >> {logDestination}")
 
     #include custom packages in the folder.
-    if not sanity_flag:
-        print("Copying custom packages.")
-        for item in os.listdir('.'):
-            if item[-3:] == 'whl':
-                exitCode = os.system(f'cp {item} {pythonDestination}/{item}')
-                #exitCode == 0 for successfull downloads
-                if exitCode:
-                    os.system(f"echo {item} >> {error_file}")
-                else:
-                    os.system(f"echo {item} >> {logDestination}")
+    print("Copying custom packages.")
+    for item in os.listdir('.'):
+        if item[-3:] == 'whl':
+            exitCode = os.system(f'cp {item} {pythonDestination}/{item}')
+            #exitCode == 0 for successfull downloads
+            if exitCode:
+                os.system(f"echo {item} >> {error_file}")
+            else:
+                os.system(f"echo {item} >> {logDestination}")
 
 
     #include custom packages in the folder.
