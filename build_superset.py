@@ -33,7 +33,7 @@ def R_main(destination, requirements, error_file):
 
 
 
-def python_main(destination, requirements, error_file):
+def python_main(destination, requirements, error_file, sanity_flag=False):
     
     # create a package log file
     logDestination = os.path.join(BASE_DIR, "python_log.log")
@@ -62,31 +62,32 @@ def python_main(destination, requirements, error_file):
     os.system(f"{PYTHON_NAME} -m pip install --upgrade pip")
 
     # for all installed packages in the Databricks environment, download the wheel file for exact version
-    print("Downloading environment packages...")
-    for package, version in list(installed_packages.items()):
-        print(f"{PIP_NAME} download {package}=={version} -d {pythonDestination} --platform=manylinux1_x86_64 --only-binary=:all: --python-version {PYTHON_VERSION}")
-        exitCode = os.system(f"{PIP_NAME} download {package}=={version} -d {pythonDestination} --platform=manylinux1_x86_64 --only-binary=:all: --python-version {PYTHON_VERSION}")
+    if not sanity_flag:
+        print("Downloading environment packages...")
+        for package, version in list(installed_packages.items()):
+            print(f"{PIP_NAME} download {package}=={version}    -d {pythonDestination} --platform=manylinux1_x86_64 --only-binary=:all: --python-version {PYTHON_VERSION}")
+            exitCode = os.system(f"{PIP_NAME} download {package}=={version} -d {pythonDestination} --platform=manylinux1_x86_64 --only-binary=:all: --python-version {PYTHON_VERSION}")
 
-        #exitCode == 0 for successfull downloads
-        if exitCode:
-            print(f"{PIP_NAME} download {package}=={version} -d {pythonDestination}")
-            exitCode = os.system(f"{PIP_NAME} download {package}=={version} -d {pythonDestination}")
+            #exitCode == 0 for successfull downloads
             if exitCode:
-                print(f"{PYTHON_NAME} -m pip download {package}=={version} -d {pythonDestination}")
-                exitCode = os.system(f"{PYTHON_NAME} -m pip download {package}=={version} -d {pythonDestination}")
+                print(f"{PIP_NAME} download {package}=={version} -d {pythonDestination}")
+                exitCode = os.system(f"{PIP_NAME} download {package}=={version} -d {pythonDestination}")
                 if exitCode:
-                    print(f"{PIP_NAME} download {package} -d {pythonDestination}")
-                    exitCode = os.system(f"{PIP_NAME} download {package} -d {pythonDestination}")
+                    print(f"{PYTHON_NAME} -m pip download {package}=={version} -d {pythonDestination}")
+                    exitCode = os.system(f"{PYTHON_NAME} -m pip download {package}=={version} -d {pythonDestination}")
                     if exitCode:
-                        os.system(f"echo {package}=={version} >> {error_file}")
+                        print(f"{PIP_NAME} download {package} -d {pythonDestination}")
+                        exitCode = os.system(f"{PIP_NAME} download {package} -d {pythonDestination}")
+                        if exitCode:
+                            os.system(f"echo {package}=={version} >> {error_file}")
+                        else:
+                            os.system(f"echo {package} >> {logDestination}")
                     else:
-                        os.system(f"echo {package} >> {logDestination}")
+                        os.system(f"echo {package}=={version} >> {logDestination}")
                 else:
                     os.system(f"echo {package}=={version} >> {logDestination}")
             else:
                 os.system(f"echo {package}=={version} >> {logDestination}")
-        else:
-            os.system(f"echo {package}=={version} >> {logDestination}")
 
 
     #For addtional requirements or specific version requests that need to be included in the superset
@@ -136,15 +137,16 @@ def python_main(destination, requirements, error_file):
                         os.system(f"echo {package} >> {logDestination}")
 
     #include custom packages in the folder.
-    print("Copying custom packages.")
-    for item in os.listdir('.'):
-        if item[-3:] == 'whl':
-            exitCode = os.system(f'cp {item} {pythonDestination}/{item}')
-            #exitCode == 0 for successfull downloads
-            if exitCode:
-                os.system(f"echo {item} >> {error_file}")
-            else:
-                os.system(f"echo {item} >> {logDestination}")
+    if not sanity_flag:
+        print("Copying custom packages.")
+        for item in os.listdir('.'):
+            if item[-3:] == 'whl':
+                exitCode = os.system(f'cp {item} {pythonDestination}/{item}')
+                #exitCode == 0 for successfull downloads
+                if exitCode:
+                    os.system(f"echo {item} >> {error_file}")
+                else:
+                    os.system(f"echo {item} >> {logDestination}")
 
 
     #include custom packages in the folder.
@@ -185,7 +187,15 @@ if __name__ == '__main__':
 
     parser.add_argument('-python', action='store_true')
 
+    parser.add_argument('-sanity_check', action='store_false')
+
     known_args, pipeline_args = parser.parse_known_args()
+
+    #run sanity_check mode
+    if known_args.sanity_check:
+        python_main(known_args.destination, known_args.requirements, known_args.error, sanity_flag=True)
+        os.system(f"cd {known_args.destination} && tar cvf {TAR_NAME} *")
+        return
 
     #create destination folder if not exists.
     if not os.path.exists(known_args.destination):
@@ -206,4 +216,5 @@ if __name__ == '__main__':
         os.remove(path)
     except OSError:
         pass
+
     os.system(f"cd {known_args.destination} && tar cvf {TAR_NAME} *")
