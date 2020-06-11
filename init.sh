@@ -10,9 +10,13 @@ PIP_NAME="pip"
 
 PIP_EXECUTABLE=$(which pip3)
 
-# if test -f "$PACKAGE_ARCHIVE_PATH"; then
- #    mkdir -p $WHEELHOUSE_PATH
-	# tar -xvf "${PACKAGE_ARCHIVE_PATH}" -C $WHEELHOUSE_PATH
+echo $DB_IS_DRIVER
+if [[ $DB_IS_DRIVER = "TRUE" ]]; then
+	echo $DB_IS_DRIVER
+else
+	echo $DB_IS_DRIVER
+fi
+
 ${PIP_NAME} install  "${WHEELHOUSE_PATH}/python/${PIP_WHEEL_NAME}.whl"
 for PACKAGE in `cat "$PYTHON_REQUIREMENTS_FILE"`
 do
@@ -25,4 +29,3 @@ do
 	var="install.packages(\"${WHEELHOUSE_PATH}/R/${filename}\", repos = NULL, type = 'source')"
 	Rscript -e "$var" || true
 done
-# fi
