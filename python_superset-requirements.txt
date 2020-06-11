@@ -137,7 +137,7 @@ virtualenv==16.0.0
 wcwidth==0.1.7
 webencodings==0.5.1
 websocket-client==0.56.0
-Werkzeug==0.14.1
+Werkzeug==0.15.3
 wheel==0.31.1
 wrapt==1.11.1
 xgboost==0.9
