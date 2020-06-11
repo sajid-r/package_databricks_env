@@ -11,14 +11,23 @@ PYTHON_VERSION = '3.6'
 BASE_DIR = '/dbfs/FileStore/tables'
 PYTHON_NAME = 'python3'
 
-def R_main(destination, requirements, error_file):
+def R_main(destination, requirements, error_file, sanity_flag=False):
     RDestination = f"{destination}/R"
     if not os.path.exists(RDestination):
         os.makedirs(RDestination)
 
-    #download environment packages
-    script_path = os.path.join(BASE_DIR, R_SCRIPT_NAME)
-    os.system(f"Rscript --vanilla {script_path} >> {os.path.join(BASE_DIR, 'R_log.log')}")
+    if not sanity_flag:
+        #download environment packages
+        script_path = os.path.join(BASE_DIR, R_SCRIPT_NAME)
+        os.system(f"Rscript --vanilla {script_path} >> {os.path.join(BASE_DIR, 'R_log.log')}")
+
+    #download packages in requirements file
+    if requirements:
+        print("Downloading packages from the requirements file...")
+        with open(requirements, 'r') as csv:
+            for package in csv.readlines():
+                os.system(f'Rscript --vanilla -e download.packages({package}, destdir = "/dbfs/FileStore/tables/wheelhouse/R", repos=\'http://cran.us.r-project.org\')')
+
 
     #include custom packages in the folder.
     print("Copying custom packages.")
@@ -34,7 +43,7 @@ def R_main(destination, requirements, error_file):
 
 
 def python_main(destination, requirements, error_file, sanity_flag=False):
-    
+
     # create a package log file
     logDestination = os.path.join(BASE_DIR, "python_log.log")
 
@@ -99,7 +108,7 @@ def python_main(destination, requirements, error_file, sanity_flag=False):
                 if version:
                     print(f"{PIP_NAME} download {package}=={version} -d {pythonDestination} --platform=manylinux1_x86_64 --only-binary=:all: --python-version {PYTHON_VERSION}")
                     exitCode = os.system(f"{PIP_NAME} download {package}=={version} -d {pythonDestination} --platform=manylinux1_x86_64 --only-binary=:all:")
-                    
+
                     #exitCode == 0 for successfull downloads
                     if exitCode:
                         print(f"{PIP_NAME} download {package}=={version} -d {pythonDestination}")
@@ -171,8 +180,13 @@ if __name__ == '__main__':
                         help='Path to the folder where all the wheels should be stored. The final tar file is also stored in this folder.')
 
     known_args, pipeline_args = parser.parse_known_args()
-    
-    parser.add_argument('--requirements',
+
+    parser.add_argument('--python_requirements',
+                        type=str,
+                        default=None,
+                        help='Path to the requirements file with additional packages or package versions that need to be downloaded and included in the superset tar.')
+
+    parser.add_argument('--R_requirements',
                         type=str,
                         default=None,
                         help='Path to the requirements file with additional packages or package versions that need to be downloaded and included in the superset tar.')
@@ -186,34 +200,36 @@ if __name__ == '__main__':
 
     parser.add_argument('-python', action='store_true')
 
-    parser.add_argument('-sanity_check', action='store_false')
+    parser.add_argument('-sanity_check', action='store_true')
 
     known_args, pipeline_args = parser.parse_known_args()
 
     #run sanity_check mode
+    print(known_args.sanity_check)
     if known_args.sanity_check:
-        python_main(known_args.destination, known_args.requirements, known_args.error, sanity_flag=True)
+        python_main(known_args.destination, known_args.python_requirements, known_args.error, sanity_flag=True)
+        R_main(known_args.destination, known_args.R_requirements, known_args.error, sanity_flag=True)
         os.system(f"cd {known_args.destination} && tar cvf {TAR_NAME} *")
-        return
 
-    #create destination folder if not exists.
-    if not os.path.exists(known_args.destination):
-        os.makedirs(known_args.destination)
+    else:
+        #create destination folder if not exists.
+        if not os.path.exists(known_args.destination):
+            os.makedirs(known_args.destination)
 
-    if (known_args.python):
-        print("Downloading Python packages...")
-        python_main(known_args.destination, known_args.requirements, known_args.error)
-    if (known_args.R):
-        print("Downloading R packages...")
-        R_main(known_args.destination, known_args.requirements, known_args.error)
+        if (known_args.python):
+            print("Downloading Python packages...")
+            python_main(known_args.destination, known_args.python_requirements, known_args.error)
+        if (known_args.R):
+            print("Downloading R packages...")
+            R_main(known_args.destination, known_args.R_requirements, known_args.error)
 
-    #tar and save to location
-    print(f"Download Completed. Compressing into {TAR_NAME}")
-    #remove previous tar if exists
-    try:
-        path = os.path.join(known_args.destination, TAR_NAME)
-        os.remove(path)
-    except OSError:
-        pass
+        #tar and save to location
+        print(f"Download Completed. Compressing into {TAR_NAME}")
+        #remove previous tar if exists
+        try:
+            path = os.path.join(known_args.destination, TAR_NAME)
+            os.remove(path)
+        except OSError:
+            pass
 
-    os.system(f"cd {known_args.destination} && tar cvf {TAR_NAME} *")
+        os.system(f"cd {known_args.destination} && tar cvf {TAR_NAME} *")
