@@ -16,12 +16,13 @@ PIP_EXECUTABLE=$(which pip3)
 ${PIP_NAME} install  "${WHEELHOUSE_PATH}/python/${PIP_WHEEL_NAME}.whl"
 for PACKAGE in `cat "$PYTHON_REQUIREMENTS_FILE"`
 do
-	python3 -m ${PIP_NAME} install $PACKAGE --no-index --find-links "${WHEELHOUSE_PATH}/python" || true
+	python3 -m ${PIP_NAME} install --upgrade $PACKAGE --no-index --find-links "${WHEELHOUSE_PATH}/python" || true
 done
 
 #rm -rf $WHEELHOUSE_PATH
 for filename in `cat "$R_REQUIREMENTS_FILE"`
-	var="install.packages(\"$filename\", repos = NULL, type = 'source')"
-	Rscript -e "$var"
+do
+	var="install.packages(\"${WHEELHOUSE_PATH}/R/${filename}\", repos = NULL, type = 'source')"
+	Rscript -e "$var" || true
 done
 # fi
