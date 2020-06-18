@@ -199,15 +199,16 @@ if __name__ == '__main__':
 
     parser.add_argument('-python', action='store_true')
 
-    parser.add_argument('-sanity_check', action='store_false')
+    parser.add_argument('-sanity_check', action='store_true')
 
     known_args, pipeline_args = parser.parse_known_args()
 
     #run sanity_check mode
     if known_args.sanity_check:
-        python_main(known_args.destination, known_args.python_requirements, known_args.error, sanity_flag=True)
-        R_main(known_args.destination, known_args.R_requirements, known_args.error, sanity_flag=True)
-        os.system(f"cd {known_args.destination} && tar cvf {TAR_NAME} *")
+        if known_args.python:
+            python_main(known_args.destination, known_args.python_requirements, known_args.error, sanity_flag=True)
+        if known_args.R:
+            R_main(known_args.destination, known_args.R_requirements, known_args.error, sanity_flag=True)
 
     else:
         #create destination folder if not exists.
@@ -221,6 +222,8 @@ if __name__ == '__main__':
             print("Downloading R packages...")
             R_main(known_args.destination, known_args.R_requirements, known_args.error)
 
+
+    if known_args.tar:    
         #tar and save to location
         print(f"Download Completed. Compressing into {TAR_NAME}")
         #remove previous tar if exists
