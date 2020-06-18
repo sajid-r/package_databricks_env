@@ -5,6 +5,7 @@ import argparse
 TAR_NAME = 'superset_library.tar'
 ERROR_LOG = 'error.log'
 R_SCRIPT_NAME = 'build_packages.R'
+R_REQ_DWNLD_SCRIPT = 'download_packages.R'
 PIP_VERSION = '20.1'
 PIP_NAME = 'pip3'
 PYTHON_VERSION = '3.6'
@@ -21,12 +22,10 @@ def R_main(destination, requirements, error_file, sanity_flag=False):
         script_path = os.path.join(BASE_DIR, R_SCRIPT_NAME)
         os.system(f"Rscript --vanilla {script_path} >> {os.path.join(BASE_DIR, 'R_log.log')}")
 
-    #download packages in requirements file
+    #download packages from the requirements file
     if requirements:
-        print("Downloading packages from the requirements file...")
-        with open(requirements, 'r') as csv:
-            for package in csv.readlines():
-                os.system(f'Rscript --vanilla -e download.packages({package}, destdir = "/dbfs/FileStore/tables/wheelhouse/R", repos=\'http://cran.us.r-project.org\')')
+        print("Downloading packages from te requiments file....")
+        os.sytem(f"Rscript --vanilla {R_REQ_DWNLD_SCRIPT} >> {os.path.join(BASE_DIR, 'R_log.log')}")
 
 
     #include custom packages in the folder.
@@ -43,7 +42,7 @@ def R_main(destination, requirements, error_file, sanity_flag=False):
 
 
 def python_main(destination, requirements, error_file, sanity_flag=False):
-
+    
     # create a package log file
     logDestination = os.path.join(BASE_DIR, "python_log.log")
 
@@ -108,7 +107,7 @@ def python_main(destination, requirements, error_file, sanity_flag=False):
                 if version:
                     print(f"{PIP_NAME} download {package}=={version} -d {pythonDestination} --platform=manylinux1_x86_64 --only-binary=:all: --python-version {PYTHON_VERSION}")
                     exitCode = os.system(f"{PIP_NAME} download {package}=={version} -d {pythonDestination} --platform=manylinux1_x86_64 --only-binary=:all:")
-
+                    
                     #exitCode == 0 for successfull downloads
                     if exitCode:
                         print(f"{PIP_NAME} download {package}=={version} -d {pythonDestination}")
@@ -180,7 +179,7 @@ if __name__ == '__main__':
                         help='Path to the folder where all the wheels should be stored. The final tar file is also stored in this folder.')
 
     known_args, pipeline_args = parser.parse_known_args()
-
+    
     parser.add_argument('--python_requirements',
                         type=str,
                         default=None,
@@ -200,12 +199,11 @@ if __name__ == '__main__':
 
     parser.add_argument('-python', action='store_true')
 
-    parser.add_argument('-sanity_check', action='store_true')
+    parser.add_argument('-sanity_check', action='store_false')
 
     known_args, pipeline_args = parser.parse_known_args()
 
     #run sanity_check mode
-    print(known_args.sanity_check)
     if known_args.sanity_check:
         python_main(known_args.destination, known_args.python_requirements, known_args.error, sanity_flag=True)
         R_main(known_args.destination, known_args.R_requirements, known_args.error, sanity_flag=True)
