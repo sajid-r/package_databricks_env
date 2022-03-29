@@ -35,7 +35,7 @@ GitPython==2.1.11
 grpcio==1.12.1
 gunicorn==19.9.0
 h5py==2.8.0
-horovod==0.16.4
+horovod==0.24.0
 html5lib==1.0.1
 hyperopt==0.2.4
 idna==2.6
